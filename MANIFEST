@@ -5,28 +5,6 @@ INSTALL
 Makefile.PL
 Changes
 META.yml
-#!perl -Tw
-
-use Test::More tests => 1;
-
-# Test for successful module load
-
-BEGIN {
-    use_ok( 'Test::GlassBox::Heavy' );
-}
-
-diag( "Testing Test::GlassBox::Heavy $Test::GlassBox::Heavy::VERSION, Perl $], $^X" );
-#!perl -T
-
-use Test::More;
-eval "use Test::Pod 1.14";
-plan skip_all => "Test::Pod 1.14 required for testing POD" if $@;
-all_pod_files_ok();
-#!perl -T
-
-use Test::More;
-eval "use Test::Pod::Coverage 1.04";
-plan skip_all => "Test::Pod::Coverage 1.04 required for testing POD coverage" if $@;
-all_pod_coverage_ok(
-    {also_private => [ qr/^load_subs/, qr/^get_subref/ ]}
-);
+t/pod.t
+t/pod-coverage.t
+t/load.t
