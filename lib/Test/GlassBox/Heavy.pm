@@ -14,7 +14,7 @@ use Devel::Symdump;
 use File::Slurp;
 use Carp;
 
-our $VERSION = 0.01;
+our $VERSION = 0.02;
 # $Id$
 
 sub load_subs {
@@ -23,8 +23,15 @@ sub load_subs {
     my $pkg  = shift || $callpkg;
     my $key = 'jei8ohNe';
 
-    eval "package $pkg; sub $key { no warnings; $text }; 1;"
-        or die $@;
+    my $opts = shift || {};
+    $opts->{exit}   ||= sub { $_[0] ||= 0; die "caught exit($_[0])\n" };
+    $opts->{system} ||= sub { system @_ };
+    my $subs = 'use subs qw(exit system)';
+
+    eval "package $pkg; $subs; sub $key { no warnings 'closure'; $text }; 1;"
+        or croak $@;
+
+    *{qualify_to_ref($_,$pkg)} = $opts->{$_} for (qw(exit system));
 
     my %globals = %{ [peek_my(1)]->[0] };
 
@@ -38,9 +45,6 @@ sub load_subs {
                 if !exists $globals{$v};
             lexalias(\&{$main::{"${pkg}::"}{$sub}} , $v, $globals{$v});
         }
-
-        *{qualify_to_ref($sub,$callpkg)} = *{qualify_to_ref($sub,$pkg)}
-            if defined shift;
     }
 
     return 1;
@@ -62,7 +66,7 @@ Test::GlassBox::Heavy - Non-invasive testing of subroutines within Perl programs
 
 =head1 VERSION
 
-This document refers to version 0.01 of Test::GlassBox::Heavy
+This document refers to version 0.02 of Test::GlassBox::Heavy
 
 =head1 SYNOPSIS
 
@@ -72,12 +76,12 @@ This document refers to version 0.01 of Test::GlassBox::Heavy
  my $global = 'foo';
  
  load_subs( $perl_program_file );
- # subs from $perl_program are now available for calling directly
+ # subs from $perl_program_file are now available for calling directly
  
  # OR
  
  load_subs( $perl_program_file, $namespace );
- # subs from $perl_program are now available for calling in $namespace
+ # subs from $perl_program_file are now available for calling in $namespace
 
 =head1 PURPOSE
 
@@ -136,12 +140,37 @@ another namespace:
  # and then...
  $retval = &Other::Place::myperlapp_sub($a,$b);
 
-Finally, should you want it, you can have the subroutines exported to both
-another namespace and your own, by passing a true value as a third argument:
+=head2 Catching C<exit()> and other such calls
 
- load_subs( '/usr/bin/myperlapp', 'Other::Place', 1 );
+There's the potential for a subroutine to call C<exit()>, which would
+seriously cramp the style of your unit tests. All is not lost, as by default
+this module installs a hook which turns C<exit()> into C<die()>, and in turn
+C<die()> can be caught by an C<eval> as part of your test. You can override
+the hook by passing a HASH reference as the third argument to C<load_subs>,
+like so:
 
-To be honest I'm not quite sure why I put that feature in.
+ load_subs( '/usr/bin/myperlapp', 'Other::Place', {
+     exit => sub { $_[0] ||= 0; die "caught exit($_[0])\n" }
+ } );
+
+In fact the example above is the default hook - it dies with that message.
+Pass a subroutine reference as shown above and you can get C<exit()> to do
+whatever you like. With the default hook, you might have this in your tests:
+
+ # unit test
+ my $ret = eval { &Other::Place::sub_which_exits($a,$b) };
+ is( $ret, 'caught exit(0)', 'subroutine exit!' );
+
+If you want to use the hook mechanism but still have the subroutines loaded
+into your own namespace, then pass a false value as the second argument to
+C<load_subs>:
+
+ load_subs( '/usr/bin/myperlapp', undef, { ... } );
+
+Finally, a similar facility to that described here for overriding C<exit()> is
+available for the C<system()> builtin as well. The default hook for
+C<system()> is a noop though - it just allows the call to C<system()> to go
+ahead.
 
 =head1 CAVEATS
 
@@ -153,8 +182,7 @@ You have to call the subroutines with leading C<&> to placate strict mode.
 
 =item *
 
-Warnings are disabled when the program is loaded, although strict mode remains
-on.
+Warnings of category C<closure> are disabled in your loaded program.
 
 =item *
 

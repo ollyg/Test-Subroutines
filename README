@@ -3,7 +3,7 @@ NAME
     programs
 
 VERSION
-    This document refers to version 0.01 of Test::GlassBox::Heavy
+    This document refers to version 0.02 of Test::GlassBox::Heavy
 
 SYNOPSIS
      use Test::GlassBox::Heavy qw(load_subs);
@@ -12,12 +12,12 @@ SYNOPSIS
      my $global = 'foo';
  
      load_subs( $perl_program_file );
-     # subs from $perl_program are now available for calling directly
+     # subs from $perl_program_file are now available for calling directly
  
      # OR
  
      load_subs( $perl_program_file, $namespace );
-     # subs from $perl_program are now available for calling in $namespace
+     # subs from $perl_program_file are now available for calling in $namespace
 
 PURPOSE
     You have a (possibly ancient) Perl program for which you'd like to write
@@ -74,20 +74,43 @@ USAGE
      # and then...
      $retval = &Other::Place::myperlapp_sub($a,$b);
 
-    Finally, should you want it, you can have the subroutines exported to
-    both another namespace and your own, by passing a true value as a third
-    argument:
+  Catching "exit()" and other such calls
+    There's the potential for a subroutine to call "exit()", which would
+    seriously cramp the style of your unit tests. All is not lost, as by
+    default this module installs a hook which turns "exit()" into "die()",
+    and in turn "die()" can be caught by an "eval" as part of your test. You
+    can override the hook by passing a HASH reference as the third argument
+    to "load_subs", like so:
 
-     load_subs( '/usr/bin/myperlapp', 'Other::Place', 1 );
+     load_subs( '/usr/bin/myperlapp', 'Other::Place', {
+         exit => sub { $_[0] ||= 0; die "caught exit($_[0])\n" }
+     } );
 
-    To be honest I'm not quite sure why I put that feature in.
+    In fact the example above is the default hook - it dies with that
+    message. Pass a subroutine reference as shown above and you can get
+    "exit()" to do whatever you like. With the default hook, you might have
+    this in your tests:
+
+     # unit test
+     my $ret = eval { &Other::Place::sub_which_exits($a,$b) };
+     is( $ret, 'caught exit(0)', 'subroutine exit!' );
+
+    If you want to use the hook mechanism but still have the subroutines
+    loaded into your own namespace, then pass a false value as the second
+    argument to "load_subs":
+
+     load_subs( '/usr/bin/myperlapp', undef, { ... } );
+
+    Finally, a similar facility to that described here for overriding
+    "exit()" is available for the "system()" builtin as well. The default
+    hook for "system()" is a noop though - it just allows the call to
+    "system()" to go ahead.
 
 CAVEATS
     *   You have to call the subroutines with leading "&" to placate strict
         mode.
 
-    *   Warnings are disabled when the program is loaded, although strict
-        mode remains on.
+    *   Warnings of category "closure" are disabled in your loaded program.
 
     *   You have to create any required global lexicals in your own
         namespace.

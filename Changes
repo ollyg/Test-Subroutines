@@ -1,4 +1,12 @@
-libtest-glassbox-heavy-perl (0.01-1) unstable; urgency=low
+libtest-glassbox-heavy-perl (0.02-1) UNRELEASED; urgency=low
+
+  * Remove option to have local and specified namespace imports
+  * Add facility for overriding exit,system builtins with sub hooks
+  * Tighten warning disabling to only category 'closure' (see perldiag)
+
+ -- Oliver Gorwits <oliver.gorwits@oucs.ox.ac.uk>  Sat, 17 May 2008 19:22:11 +0100
+
+libtest-glassbox-heavy-perl (0.01-1) UNRELEASED; urgency=low
 
   * Initial Release.
 

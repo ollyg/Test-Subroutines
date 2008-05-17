@@ -3,14 +3,14 @@
 use strict;
 use warnings FATAL => 'all';
 
-use lib './lib';
+#use lib '../lib';
 use Test::GlassBox::Heavy qw(load_subs get_subref);
 
 my $i = 5;
 
-load_subs('/home/oliver/tmp/src.pl', 'Bar', 1);
+load_subs('./src.pl', 'Bar', {system => sub { print "system! @_\n" }});
 
 #my $sub = get_subref('doit');
 #$sub->();
-&doit;
+&Bar::doit;
 
