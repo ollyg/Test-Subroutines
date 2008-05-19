@@ -1,3 +1,9 @@
+libtest-glassbox-heavy-perl (0.03-1) UNRELEASED; urgency=low
+
+  * Fix for dumb mistake in POD. My proofreader has been fired. 
+
+ -- Oliver Gorwits <oliver.gorwits@oucs.ox.ac.uk>  Mon, 19 May 2008 15:15:44 +0100
+
 libtest-glassbox-heavy-perl (0.02-1) UNRELEASED; urgency=low
 
   * Remove option to have local and specified namespace imports

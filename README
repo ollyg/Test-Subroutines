@@ -3,7 +3,7 @@ NAME
     programs
 
 VERSION
-    This document refers to version 0.02 of Test::GlassBox::Heavy
+    This document refers to version 0.03 of Test::GlassBox::Heavy
 
 SYNOPSIS
      use Test::GlassBox::Heavy qw(load_subs);
@@ -92,8 +92,8 @@ USAGE
     this in your tests:
 
      # unit test
-     my $ret = eval { &Other::Place::sub_which_exits($a,$b) };
-     is( $ret, 'caught exit(0)', 'subroutine exit!' );
+     eval { &Other::Place::sub_which_exits($a,$b) };
+     is( $@, 'caught exit(0)', 'subroutine exit!' );
 
     If you want to use the hook mechanism but still have the subroutines
     loaded into your own namespace, then pass a false value as the second
@@ -121,13 +121,13 @@ BUGS
     certainly uses other modules which have grave warnings about treading on
     Perl's toes with all this deep magic.
 
+SEE ALSO
+    Code::Splice
+
     There's another way to do this - much simpler and without needing the
     deep magic modules. "batman" from IRC put this together, here:
     <http://trac.flodhest.net/pm/wiki/ImportSubs>. There are pros and cons
     to both methods.
-
-SEE ALSO
-    Code::Splice
 
 REQUIREMENTS
     Other than the standard contents of the Perl distribution, you will

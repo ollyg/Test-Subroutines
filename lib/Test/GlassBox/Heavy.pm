@@ -14,7 +14,7 @@ use Devel::Symdump;
 use File::Slurp;
 use Carp;
 
-our $VERSION = 0.02;
+our $VERSION = 0.03;
 # $Id$
 
 sub load_subs {
@@ -66,7 +66,7 @@ Test::GlassBox::Heavy - Non-invasive testing of subroutines within Perl programs
 
 =head1 VERSION
 
-This document refers to version 0.02 of Test::GlassBox::Heavy
+This document refers to version 0.03 of Test::GlassBox::Heavy
 
 =head1 SYNOPSIS
 
@@ -158,8 +158,8 @@ Pass a subroutine reference as shown above and you can get C<exit()> to do
 whatever you like. With the default hook, you might have this in your tests:
 
  # unit test
- my $ret = eval { &Other::Place::sub_which_exits($a,$b) };
- is( $ret, 'caught exit(0)', 'subroutine exit!' );
+ eval { &Other::Place::sub_which_exits($a,$b) };
+ is( $@, 'caught exit(0)', 'subroutine exit!' );
 
 If you want to use the hook mechanism but still have the subroutines loaded
 into your own namespace, then pass a false value as the second argument to
@@ -197,11 +197,6 @@ project, and I've not tested it thoroughly. The module certainly uses other
 modules which have grave warnings about treading on Perl's toes with all this
 deep magic.
 
-There's another way to do this - much simpler and without needing the deep
-magic modules. C<batman> from IRC put this together, here:
-L<http://trac.flodhest.net/pm/wiki/ImportSubs>. There are pros and cons to
-both methods.
-
 =head1 SEE ALSO
 
 =over 4
@@ -209,6 +204,11 @@ both methods.
 =item L<Code::Splice>
 
 =back
+
+There's another way to do this - much simpler and without needing the deep
+magic modules. C<batman> from IRC put this together, here:
+L<http://trac.flodhest.net/pm/wiki/ImportSubs>. There are pros and cons to
+both methods.
 
 =head1 REQUIREMENTS
 
