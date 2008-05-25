@@ -8,9 +8,9 @@ use Test::GlassBox::Heavy qw(load_subs get_subref);
 
 my $i = 5;
 
-load_subs('./src.pl', 'Bar', {system => sub { print "system! @_\n" }});
+load_subs('./src.pl', 'Bar::Baz', {system => sub { print "system! @_\n" }});
 
 #my $sub = get_subref('doit');
 #$sub->();
-&Bar::doit;
+&Bar::Baz::doit;
 

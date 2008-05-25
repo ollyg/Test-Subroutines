@@ -11,11 +11,51 @@ use Devel::LexAlias qw(lexalias);
 use PadWalker qw(closed_over peek_my);
 use Symbol qw(qualify_to_ref);
 use Devel::Symdump;
+use Data::Dumper;
 use File::Slurp;
 use Carp;
 
 our $VERSION = 0.03;
 # $Id$
+
+our (%imported, $package);
+#BEGIN {
+#    unshift @INC, \&trace_use
+#        unless grep { "$_" eq \&trace_use . '' } @INC;
+#}
+
+sub trace_use {
+    my ($code, $module) = @_;
+    (my $mod_name = $module) =~ s{/}{::};
+    $mod_name =~ s/\.pm$//;
+    my $caller = caller();
+
+    return undef if !defined $package or $package ne $caller;
+
+#    eval "package $mod_name; use subs 'import';";
+
+    print "$caller wants $mod_name\n";
+    $imported{$_}++ for Devel::Symdump->functions($caller);
+    print Dumper \%imported;
+    {
+        local *INC = [ @INC[1..$#INC] ];
+        eval "package $caller; require '$mod_name';";
+    }
+    $imported{$_}++ for Devel::Symdump->functions($caller);
+    print Dumper \%imported;
+
+    {
+        no warnings 'redefine';
+        *{qualify_to_ref('import','Exporter')} = sub {
+            print STDERR "Exporter import! @_\n";
+        };
+#        *{qualify_to_ref('import',$mod_name)} = sub {
+#            print STDERR "$mod_name import! @_\n";
+#        };
+    }
+
+    return;
+}
 
 sub load_subs {
     my $text = read_file( shift );
@@ -27,23 +67,32 @@ sub load_subs {
     $opts->{exit}   ||= sub { $_[0] ||= 0; die "caught exit($_[0])\n" };
     $opts->{system} ||= sub { system @_ };
     my $subs = 'use subs qw(exit system)';
+    my $a = "BEGIN { use Data::Dumper; print Dumper [Devel::Symdump->functions('$pkg')] }";
 
-    eval "package $pkg; $subs; sub $key { no warnings 'closure'; $text }; 1;"
-        or croak $@;
+    {
+        local %imported = ();
+        local $package = $pkg;
+        eval "package $pkg; $subs; $a; sub $key { no warnings 'closure'; $text; }; $a; 1;"
+            or die $@;
+    }
 
     *{qualify_to_ref($_,$pkg)} = $opts->{$_} for (qw(exit system));
 
     my %globals = %{ [peek_my(1)]->[0] };
+    my $symtbl  = \%{main::};
+    foreach my $part(split /::/, $pkg) {
+        $symtbl = $symtbl->{"${part}::"};
+    }
 
     foreach my $qsub ( Devel::Symdump->functions($pkg) ) {
         (my $sub = $qsub) =~ s/^${pkg}:://;
         next if $sub eq $key;
-    
-        my @vars = keys %{ [closed_over \&{$main::{"${pkg}::"}{$sub}}]->[0] };
+ 
+        my @vars = keys %{ [closed_over \&{ $symtbl->{$sub} }]->[0] };
         foreach my $v (@vars) {
             croak "Missing lexical for \"$v\" required by \"$sub\""
                 if !exists $globals{$v};
-            lexalias(\&{$main::{"${pkg}::"}{$sub}} , $v, $globals{$v});
+            lexalias(\&{ $symtbl->{$sub} }, $v, $globals{$v});
         }
     }
 
@@ -53,7 +102,13 @@ sub load_subs {
 sub get_subref {
     my $sub = shift;
     my $pkg = shift || scalar caller(0);
-    return \&{$main::{"${pkg}::"}{$sub}};
+
+    my $symtbl = \%{main::};
+    foreach my $part(split /::/, $pkg) {
+        $symtbl = $symtbl->{"${part}::"};
+    }
+
+    return \&{ $symtbl->{$sub} };
 }
 
 1;
