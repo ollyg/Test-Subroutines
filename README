@@ -3,7 +3,7 @@ NAME
     programs
 
 VERSION
-    This document refers to version 0.03 of Test::GlassBox::Heavy
+    This document refers to version 0.04 of Test::GlassBox::Heavy
 
 SYNOPSIS
      use Test::GlassBox::Heavy qw(load_subs);

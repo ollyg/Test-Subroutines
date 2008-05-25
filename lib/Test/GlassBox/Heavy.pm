@@ -11,50 +11,25 @@ use Devel::LexAlias qw(lexalias);
 use PadWalker qw(closed_over peek_my);
 use Symbol qw(qualify_to_ref);
 use Devel::Symdump;
-use Data::Dumper;
 use File::Slurp;
 use Carp;
 
-our $VERSION = 0.03;
+our $VERSION = 0.04;
 # $Id$
 
-our (%imported, $package);
-#BEGIN {
-#    unshift @INC, \&trace_use
-#        unless grep { "$_" eq \&trace_use . '' } @INC;
-#}
+our @used_modules;
+BEGIN {
+    unshift @INC, \&trace_use
+        unless grep { "$_" eq \&trace_use . '' } @INC;
+}
 
 sub trace_use {
     my ($code, $module) = @_;
     (my $mod_name = $module) =~ s{/}{::};
     $mod_name =~ s/\.pm$//;
-    my $caller = caller();
 
-    return undef if !defined $package or $package ne $caller;
-
-#    eval "package $mod_name; use subs 'import';";
-
-    print "$caller wants $mod_name\n";
-    $imported{$_}++ for Devel::Symdump->functions($caller);
-    print Dumper \%imported;
-    {
-        local *INC = [ @INC[1..$#INC] ];
-        eval "package $caller; require '$mod_name';";
-    }
-    $imported{$_}++ for Devel::Symdump->functions($caller);
-    print Dumper \%imported;
-
-    {
-        no warnings 'redefine';
-        *{qualify_to_ref('import','Exporter')} = sub {
-            print STDERR "Exporter import! @_\n";
-        };
-#        *{qualify_to_ref('import',$mod_name)} = sub {
-#            print STDERR "$mod_name import! @_\n";
-#        };
-    }
-
-    return;
+    push @used_modules, $mod_name;
+    return undef;
 }
 
 sub load_subs {
@@ -66,34 +41,51 @@ sub load_subs {
     my $opts = shift || {};
     $opts->{exit}   ||= sub { $_[0] ||= 0; die "caught exit($_[0])\n" };
     $opts->{system} ||= sub { system @_ };
+
     my $subs = 'use subs qw(exit system)';
-    my $a = "BEGIN { use Data::Dumper; print Dumper [Devel::Symdump->functions('$pkg')] }";
+    my @used;
 
     {
-        local %imported = ();
-        local $package = $pkg;
-        eval "package $pkg; $subs; $a; sub $key { no warnings 'closure'; $text; }; $a; 1;"
-            or die $@;
+        local @used_modules = ();
+        eval "package $pkg; $subs; sub $key { no warnings 'closure'; $text; }; 1;"
+            or croak $@;
+        @used = @used_modules;
     }
 
     *{qualify_to_ref($_,$pkg)} = $opts->{$_} for (qw(exit system));
-
     my %globals = %{ [peek_my(1)]->[0] };
-    my $symtbl  = \%{main::};
-    foreach my $part(split /::/, $pkg) {
-        $symtbl = $symtbl->{"${part}::"};
-    }
 
     foreach my $qsub ( Devel::Symdump->functions($pkg) ) {
         (my $sub = $qsub) =~ s/^${pkg}:://;
         next if $sub eq $key;
- 
-        my @vars = keys %{ [closed_over \&{ $symtbl->{$sub} }]->[0] };
+
+        my $subref = get_subref($sub, $pkg);
+        my @vars = keys %{ [closed_over $subref]->[0] };
+
         foreach my $v (@vars) {
-            croak "Missing lexical for \"$v\" required by \"$sub\""
-                if !exists $globals{$v};
-            lexalias(\&{ $symtbl->{$sub} }, $v, $globals{$v});
+            if (not_external($pkg, $sub, @used)) {
+                if (exists $globals{$v}) {
+                    lexalias($subref, $v, $globals{$v});
+                }
+                else {
+                    croak qq(Missing lexical for "$v" required by "$sub");
+                }
+            }
         }
+    }
+
+    return 1;
+}
+
+sub not_external {
+    my ($p, $s, @used) = @_;
+
+    foreach my $pack (@used) {
+        next unless scalar grep {$_ eq "${pack}::$s"}
+                                (Devel::Symdump->functions($pack));
+        return 0 if
+            get_subref($s, $pack) eq get_subref($s, $p);
+            # subref in used package equal to subref in hack package
     }
 
     return 1;
@@ -108,7 +100,7 @@ sub get_subref {
         $symtbl = $symtbl->{"${part}::"};
     }
 
-    return \&{ $symtbl->{$sub} };
+    return eval{ \&{ $symtbl->{$sub} } };
 }
 
 1;
@@ -121,7 +113,7 @@ Test::GlassBox::Heavy - Non-invasive testing of subroutines within Perl programs
 
 =head1 VERSION
 
-This document refers to version 0.03 of Test::GlassBox::Heavy
+This document refers to version 0.04 of Test::GlassBox::Heavy
 
 =head1 SYNOPSIS
 

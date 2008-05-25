@@ -1,3 +1,10 @@
+libtest-glassbox-heavy-perl (0.04-1) UNRELEASED; urgency=low
+
+  * Bug fix for nested test namespaces (::)
+  * Major fix to allow ignoring of globals defined in use'd packages
+
+ -- Oliver Gorwits <oliver.gorwits@oucs.ox.ac.uk>  Sun, 25 May 2008 23:12:49 +0100
+
 libtest-glassbox-heavy-perl (0.03-1) UNRELEASED; urgency=low
 
   * Fix for dumb mistake in POD. My proofreader has been fired. 
