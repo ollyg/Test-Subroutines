@@ -1,7 +1,7 @@
 use inc::Module::Install 0.67;
 perl_version '5.008001';
   
-name        'Test::GlassBox::Heavy';
+name        'Test-GlassBox-Heavy';
 all_from    'lib/Test/GlassBox/Heavy.pm';
 
 requires    'Devel::LexAlias' => 0;
