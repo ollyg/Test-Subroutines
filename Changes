@@ -1,3 +1,10 @@
+libtest-glassbox-heavy-perl (1.01-1) UNRELEASED; urgency=low
+
+  * Move to Module::Install
+  * Add example
+
+ -- Oliver Gorwits <oliver.gorwits@oucs.ox.ac.uk>  Sat,  8 Nov 2008 18:07:31 +0000
+
 libtest-glassbox-heavy-perl (0.04-1) UNRELEASED; urgency=low
 
   * Bug fix for nested test namespaces (::)
