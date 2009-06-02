@@ -14,7 +14,7 @@ use Devel::Symdump;
 use File::Slurp;
 use Carp;
 
-our $VERSION = '1.01';
+our $VERSION = '1.02';
 $VERSION = eval $VERSION; # numify for warning-free dev releases
 
 # $Id$
@@ -39,6 +39,12 @@ sub load_subs {
     my $callpkg = scalar caller(0);
     my $pkg  = shift || $callpkg;
     my $key = 'jei8ohNe';
+
+    croak "custom namespace must not be nested (i.e. must not include ::)"
+        if $pkg =~ m/::/;
+
+    $text =~ s/\n__DATA__\n.*//s;
+    $text =~ s/\n__END__\n.*//s;
 
     my $opts = shift || {};
     $opts->{exit}   ||= sub { $_[0] ||= 0; die "caught exit($_[0])\n" };
@@ -115,7 +121,7 @@ Test::GlassBox::Heavy - Non-invasive testing of subroutines within Perl programs
 
 =head1 VERSION
 
-This document refers to version 1.01 of Test::GlassBox::Heavy
+This document refers to version 1.02 of Test::GlassBox::Heavy
 
 =head1 SYNOPSIS
 
@@ -185,9 +191,12 @@ C<my>.
 If you don't want your own namespace polluted, then load the subroutines into
 another namespace:
 
- load_subs( '/usr/bin/myperlapp', 'Other::Place' );
+ load_subs( '/usr/bin/myperlapp', 'MyTestNamespace' );
  # and then...
- $retval = &Other::Place::myperlapp_sub($a,$b);
+ $retval = &MyTestNamespace::myperlapp_sub($a,$b);
+
+Note that this namespace must not be nested, in other words it cannot contain
+the C<::> characters. This is a simple limitation which could be patched.
 
 =head2 Catching C<exit()> and other such calls
 
