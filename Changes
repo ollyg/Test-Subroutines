@@ -1,3 +1,10 @@
+libtest-glassbox-heavy-perl (1.02-1) UNRELEASED; urgency=low
+
+  * Fix for files using __END__ and __DATA__
+  * Doc patch to mention that currently the custom namespace cannot include ::
+
+ -- Oliver Gorwits <oliver.gorwits@oucs.ox.ac.uk>  Tue,  2 Jun 2009 10:42:14 +0100
+
 libtest-glassbox-heavy-perl (1.01-1) UNRELEASED; urgency=low
 
   * Move to Module::Install

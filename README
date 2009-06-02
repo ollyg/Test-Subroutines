@@ -3,7 +3,7 @@ NAME
     programs
 
 VERSION
-    This document refers to version 1.01 of Test::GlassBox::Heavy
+    This document refers to version 1.03 of Test::GlassBox::Heavy
 
 SYNOPSIS
      use Test::GlassBox::Heavy qw(load_subs);
@@ -70,9 +70,13 @@ USAGE
     If you don't want your own namespace polluted, then load the subroutines
     into another namespace:
 
-     load_subs( '/usr/bin/myperlapp', 'Other::Place' );
+     load_subs( '/usr/bin/myperlapp', 'MyTestNamespace' );
      # and then...
-     $retval = &Other::Place::myperlapp_sub($a,$b);
+     $retval = &MyTestNamespace::myperlapp_sub($a,$b);
+
+    Note that this namespace must not be nested, in other words it cannot
+    contain the "::" characters. This is a simple limitation which could be
+    patched.
 
   Catching "exit()" and other such calls
     There's the potential for a subroutine to call "exit()", which would

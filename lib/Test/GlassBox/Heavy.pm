@@ -14,7 +14,7 @@ use Devel::Symdump;
 use File::Slurp;
 use Carp;
 
-our $VERSION = '1.02';
+our $VERSION = '1.03';
 $VERSION = eval $VERSION; # numify for warning-free dev releases
 
 # $Id$
@@ -121,7 +121,7 @@ Test::GlassBox::Heavy - Non-invasive testing of subroutines within Perl programs
 
 =head1 VERSION
 
-This document refers to version 1.02 of Test::GlassBox::Heavy
+This document refers to version 1.03 of Test::GlassBox::Heavy
 
 =head1 SYNOPSIS
 
