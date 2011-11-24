@@ -1,3 +1,8 @@
+1.113280  2011-11-24 22:19:09 Europe/London
+
+  * Port to Dist::Zilla
+  * Renamed to Test::Subroutines
+
 libtest-glassbox-heavy-perl (1.02-1) UNRELEASED; urgency=low
 
   * Fix for files using __END__ and __DATA__

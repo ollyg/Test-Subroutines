@@ -1,14 +1,20 @@
 NAME
-    Test::GlassBox::Heavy - Non-invasive testing of subroutines within Perl
-    programs
+    Test::Subroutines - Standalone execution of Perl program subroutines
 
 VERSION
-    This document refers to version 1.03 of Test::GlassBox::Heavy
+    version 1.113280
+
+PURPOSE
+    You have a (possibly ancient) Perl program for which you'd like to write
+    some unit tests. The program code cannot be modified to accommodate
+    this, and you want to test subroutines but not actually *run* the
+    program. This module permits running of the program subroutines
+    standalone, and in relative safety.
 
 SYNOPSIS
-     use Test::GlassBox::Heavy qw(load_subs);
+     use Test::Subroutines; # exports load_subs
  
-     # set up any globals to match those in your Perl program
+     # set up any globals to match those in the Perl program
      my $global = 'foo';
  
      load_subs( $perl_program_file );
@@ -19,44 +25,20 @@ SYNOPSIS
      load_subs( $perl_program_file, $namespace );
      # subs from $perl_program_file are now available for calling in $namespace
 
-PURPOSE
-    You have a (possibly ancient) Perl program for which you'd like to write
-    some unit tests. The program code cannot be modified to accommodate
-    this, and you want to test subroutines but not actually *run* the
-    program. This module takes away the pain of setting up an environment
-    for this, so you can run the subroutines in (relative) safety.
-
-DESCRIPTION
-    If you have a Perl program to test, one approach is to run the program
-    with various command line options and environment settings and observe
-    the output. This might be called *black box testing* because you're
-    treating the program as an opaque blob.
-
-    Some time later you need to refactor a part of the program, so you want
-    to move on and begin unit testing the subroutines in the program. This
-    is tricky to do without accidentally running the program itself. At this
-    point you're *glass box testing* because you can inspect the internals
-    of the program, although you're not actually changing them.
-
-    This module takes a rather heavyweight approach to the above using some
-    of Perl's deep magic, such as the "Devel::" and "B::" namespace modules.
-    It stops the Perl program from being run, but allows you to call any
-    subroutine defined in the program. Essentially it turns the program into
-    a package.
-
+USAGE
     You'll need to set-up any environment the subroutines may need, such as
     global lexical variables, and also be aware that side effects from the
     subroutines will still occur (e.g. database updates).
 
-USAGE
     Load the module like so:
 
-     use Test::GlassBox::Heavy qw(load_subs);
+     use Test::Subroutines;
 
     Then use "load_subs()" to inspect your program and make available the
     subroutines within it. Let's say your program is "/usr/bin/myperlapp".
     The simplest call exports the program's subroutines into your own
-    namespace so you can call them directly:
+    namespace so you can call them directly. Note use of the "&" subroutine
+    sigil which is *required*:
 
      load_subs( '/usr/bin/myperlapp' );
      # and then...
@@ -64,7 +46,7 @@ USAGE
 
     If the subroutines happen to use global lexicals in the program, then
     you do need to set these up in your own namespace, otherwise
-    "load_subs()" will croak with an error message. Note that they must be
+    "load_subs()" will die with an error message. Note that they must be
     lexicals - i.e. using "my".
 
     If you don't want your own namespace polluted, then load the subroutines
@@ -83,10 +65,10 @@ USAGE
     seriously cramp the style of your unit tests. All is not lost, as by
     default this module installs a hook which turns "exit()" into "die()",
     and in turn "die()" can be caught by an "eval" as part of your test. You
-    can override the hook by passing a HASH reference as the third argument
-    to "load_subs", like so:
+    can override the hook by passing a HASH reference to "load_subs", like
+    so:
 
-     load_subs( '/usr/bin/myperlapp', 'Other::Place', {
+     load_subs( '/usr/bin/myperlapp', {
          exit => sub { $_[0] ||= 0; die "caught exit($_[0])\n" }
      } );
 
@@ -96,14 +78,8 @@ USAGE
     this in your tests:
 
      # unit test
-     eval { &Other::Place::sub_which_exits($a,$b) };
+     eval { &sub_which_exits($a,$b) };
      is( $@, 'caught exit(0)', 'subroutine exit!' );
-
-    If you want to use the hook mechanism but still have the subroutines
-    loaded into your own namespace, then pass a false value as the second
-    argument to "load_subs":
-
-     load_subs( '/usr/bin/myperlapp', undef, { ... } );
 
     Finally, a similar facility to that described here for overriding
     "exit()" is available for the "system()" builtin as well. The default
@@ -119,39 +95,16 @@ CAVEATS
     *   You have to create any required global lexicals in your own
         namespace.
 
-BUGS
-    Oh, there are probably plenty. I was asked to hack this up for a
-    colleague's project, and I've not tested it thoroughly. The module
-    certainly uses other modules which have grave warnings about treading on
-    Perl's toes with all this deep magic.
-
-SEE ALSO
-    Code::Splice
-
-    There's another way to do this - much simpler and without needing the
-    deep magic modules. "batman" from IRC put this together, here:
-    <http://trac.flodhest.net/pm/wiki/ImportSubs>. There are pros and cons
-    to both methods.
-
-REQUIREMENTS
-    Other than the standard contents of the Perl distribution, you will
-    need:
-
-    Devel::LexAlias
-    PadWalker
-    Devel::Symdump
-    File::Slurp
-
-AUTHOR
-    Oliver Gorwits "<oliver.gorwits@oucs.ox.ac.uk>"
-
 ACKNOWLEDGEMENTS
     Some folks on IRC were particularly helpful with suggestions: "batman",
     "mst" and "tomboh". Thanks, guys!
 
-COPYRIGHT & LICENSE
-    Copyright (c) The University of Oxford 2008.
+AUTHOR
+    Oliver Gorwits <oliver@cpan.org>
 
-    This library is free software; you can redistribute it and/or modify it
-    under the same terms as Perl itself.
+COPYRIGHT AND LICENSE
+    This software is copyright (c) 2011 by University of Oxford.
+
+    This is free software; you can redistribute it and/or modify it under
+    the same terms as the Perl 5 programming language system itself.
 
