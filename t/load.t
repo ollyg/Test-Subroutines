@@ -5,7 +5,7 @@ use Test::More tests => 1;
 # Test for successful module load
 
 BEGIN {
-    use_ok( 'Test::GlassBox::Heavy' );
+    use_ok( 'Test::Subroutines' );
 }
 
-diag( "Testing Test::GlassBox::Heavy $Test::GlassBox::Heavy::VERSION, Perl $], $^X" );
+diag( "Testing Test::Subroutines $Test::Subroutines::VERSION, Perl $], $^X" );

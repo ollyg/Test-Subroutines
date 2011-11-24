@@ -1,8 +1,9 @@
-package Test::GlassBox::Heavy;
+package Test::Subroutines;
 
 require Exporter;
 @ISA       = qw(Exporter);
-@EXPORT_OK = qw(load_subs get_subref);
+@EXPORT    = qw(load_subs);
+@EXPORT_OK = qw(get_subref);
 
 use strict;
 use warnings FATAL => 'all';
@@ -12,12 +13,6 @@ use PadWalker qw(closed_over peek_my);
 use Symbol qw(qualify_to_ref);
 use Devel::Symdump;
 use File::Slurp;
-use Carp;
-
-our $VERSION = '1.03';
-$VERSION = eval $VERSION; # numify for warning-free dev releases
-
-# $Id$
 
 our @used_modules;
 BEGIN {
@@ -36,31 +31,42 @@ sub trace_use {
 
 sub load_subs {
     my $text = read_file( shift );
-    my $callpkg = scalar caller(0);
-    my $pkg  = shift || $callpkg;
-    my $key = 'jei8ohNe';
-
-    croak "custom namespace must not be nested (i.e. must not include ::)"
-        if $pkg =~ m/::/;
-
     $text =~ s/\n__DATA__\n.*//s;
     $text =~ s/\n__END__\n.*//s;
 
-    my $opts = shift || {};
+    # optional args
+    my $pkg = scalar caller (0);
+    my $opts = {};
+    while (my $thing = shift) {
+        if (ref $thing eq ref {}) {
+            $opts = $thing;
+            next;
+        }
+        if (ref $thing eq ref '') {
+            die "custom namespace must not be nested (i.e. must not include ::)"
+                if $thing =~ m/::/;
+            $pkg = $thing;
+            next;
+        }
+    }
+
+    my $callpkg = scalar caller(0);
+    my $key = 'jei8ohNe';
+
     $opts->{exit}   ||= sub { $_[0] ||= 0; die "caught exit($_[0])\n" };
     $opts->{system} ||= sub { system @_ };
 
-    my $subs = 'use subs qw(exit system)';
+    my $subs = 'use subs qw('. (join ' ', keys %$opts) .')';
     my @used;
 
     {
         local @used_modules = ();
         eval "package $pkg; $subs; sub $key { no warnings 'closure'; $text; }; 1;"
-            or croak $@;
+            or die $@;
         @used = @used_modules;
     }
 
-    *{qualify_to_ref($_,$pkg)} = $opts->{$_} for (qw(exit system));
+    *{qualify_to_ref($_,$pkg)} = $opts->{$_} for (keys %$opts);
     my %globals = %{ [peek_my(1)]->[0] };
 
     foreach my $qsub ( Devel::Symdump->functions($pkg) ) {
@@ -76,13 +82,11 @@ sub load_subs {
                     lexalias($subref, $v, $globals{$v});
                 }
                 else {
-                    croak qq(Missing lexical for "$v" required by "$sub");
+                    die qq(Missing lexical for "$v" required by "$sub");
                 }
             }
         }
     }
-
-    return 1;
 }
 
 sub not_external {
@@ -95,8 +99,6 @@ sub not_external {
             get_subref($s, $pack) eq get_subref($s, $p);
             # subref in used package equal to subref in hack package
     }
-
-    return 1;
 }
 
 sub get_subref {
@@ -113,21 +115,24 @@ sub get_subref {
 
 1;
 
-__END__
+# ABSTRACT: Standalone execution of Perl program subroutines
 
-=head1 NAME
+=begin :prelude
 
-Test::GlassBox::Heavy - Non-invasive testing of subroutines within Perl programs
+=head1 PURPOSE
 
-=head1 VERSION
+You have a (possibly ancient) Perl program for which you'd like to write some
+unit tests. The program code cannot be modified to accommodate this, and you
+want to test subroutines but not actually I<run> the program. This module permits
+running of the program subroutines standalone, and in relative safety.
 
-This document refers to version 1.03 of Test::GlassBox::Heavy
+=end :prelude
 
 =head1 SYNOPSIS
 
- use Test::GlassBox::Heavy qw(load_subs);
+ use Test::Subroutines; # exports load_subs
  
- # set up any globals to match those in your Perl program
+ # set up any globals to match those in the Perl program
  my $global = 'foo';
  
  load_subs( $perl_program_file );
@@ -138,46 +143,21 @@ This document refers to version 1.03 of Test::GlassBox::Heavy
  load_subs( $perl_program_file, $namespace );
  # subs from $perl_program_file are now available for calling in $namespace
 
-=head1 PURPOSE
-
-You have a (possibly ancient) Perl program for which you'd like to write some
-unit tests. The program code cannot be modified to accommodate this, and you
-want to test subroutines but not actually I<run> the program. This module
-takes away the pain of setting up an environment for this, so you can run the
-subroutines in (relative) safety.
-
-=head1 DESCRIPTION
-
-If you have a Perl program to test, one approach is to run the program with
-various command line options and environment settings and observe the output.
-This might be called I<black box testing> because you're treating the program
-as an opaque blob.
-
-Some time later you need to refactor a part of the program, so you want to
-move on and begin unit testing the subroutines in the program. This is tricky
-to do without accidentally running the program itself. At this point you're
-I<glass box testing> because you can inspect the internals of the program,
-although you're not actually changing them.
-
-This module takes a rather heavyweight approach to the above using some of
-Perl's deep magic, such as the C<Devel::> and C<B::> namespace modules. It
-stops the Perl program from being run, but allows you to call any subroutine
-defined in the program. Essentially it turns the program into a package.
+=head1 USAGE
 
 You'll need to set-up any environment the subroutines may need, such as global
 lexical variables, and also be aware that side effects from the subroutines
 will still occur (e.g. database updates).
 
-=head1 USAGE
-
 Load the module like so:
 
- use Test::GlassBox::Heavy qw(load_subs);
+ use Test::Subroutines;
 
 Then use C<load_subs()> to inspect your program and make available the
 subroutines within it. Let's say your program is C</usr/bin/myperlapp>. The
 simplest call exports the program's subroutines into your own namespace so you
-can call them directly:
+can call them directly. Note use of the C<&> subroutine sigil which is
+I<required>:
 
  load_subs( '/usr/bin/myperlapp' );
  # and then...
@@ -185,7 +165,7 @@ can call them directly:
 
 If the subroutines happen to use global lexicals in the program, then you do
 need to set these up in your own namespace, otherwise C<load_subs()> will
-croak with an error message. Note that they must be lexicals - i.e. using
+die with an error message. Note that they must be lexicals - i.e. using
 C<my>.
 
 If you don't want your own namespace polluted, then load the subroutines into
@@ -204,10 +184,9 @@ There's the potential for a subroutine to call C<exit()>, which would
 seriously cramp the style of your unit tests. All is not lost, as by default
 this module installs a hook which turns C<exit()> into C<die()>, and in turn
 C<die()> can be caught by an C<eval> as part of your test. You can override
-the hook by passing a HASH reference as the third argument to C<load_subs>,
-like so:
+the hook by passing a HASH reference to C<load_subs>, like so:
 
- load_subs( '/usr/bin/myperlapp', 'Other::Place', {
+ load_subs( '/usr/bin/myperlapp', {
      exit => sub { $_[0] ||= 0; die "caught exit($_[0])\n" }
  } );
 
@@ -216,14 +195,8 @@ Pass a subroutine reference as shown above and you can get C<exit()> to do
 whatever you like. With the default hook, you might have this in your tests:
 
  # unit test
- eval { &Other::Place::sub_which_exits($a,$b) };
+ eval { &sub_which_exits($a,$b) };
  is( $@, 'caught exit(0)', 'subroutine exit!' );
-
-If you want to use the hook mechanism but still have the subroutines loaded
-into your own namespace, then pass a false value as the second argument to
-C<load_subs>:
-
- load_subs( '/usr/bin/myperlapp', undef, { ... } );
 
 Finally, a similar facility to that described here for overriding C<exit()> is
 available for the C<system()> builtin as well. The default hook for
@@ -248,57 +221,9 @@ You have to create any required global lexicals in your own namespace.
 
 =back
 
-=head1 BUGS
-
-Oh, there are probably plenty. I was asked to hack this up for a colleague's
-project, and I've not tested it thoroughly. The module certainly uses other
-modules which have grave warnings about treading on Perl's toes with all this
-deep magic.
-
-=head1 SEE ALSO
-
-=over 4
-
-=item L<Code::Splice>
-
-=back
-
-There's another way to do this - much simpler and without needing the deep
-magic modules. C<batman> from IRC put this together, here:
-L<http://trac.flodhest.net/pm/wiki/ImportSubs>. There are pros and cons to
-both methods.
-
-=head1 REQUIREMENTS
-
-Other than the standard contents of the Perl distribution, you will need:
-
-=over 4
-
-=item L<Devel::LexAlias>
-
-=item L<PadWalker>
-
-=item L<Devel::Symdump>
-
-=item L<File::Slurp>
-
-=back
-
-=head1 AUTHOR
-
-Oliver Gorwits C<< <oliver.gorwits@oucs.ox.ac.uk> >>
-
 =head1 ACKNOWLEDGEMENTS
 
 Some folks on IRC were particularly helpful with suggestions: C<batman>,
 C<mst> and C<tomboh>. Thanks, guys!
 
-=head1 COPYRIGHT & LICENSE
-
-Copyright (c) The University of Oxford 2008.
-
-This library is free software; you can redistribute it and/or modify it under
-the same terms as Perl itself.
-
 =cut
-
