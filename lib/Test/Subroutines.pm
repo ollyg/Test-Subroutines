@@ -1,6 +1,6 @@
 package Test::Subroutines;
 {
-  $Test::Subroutines::VERSION = '1.113280';
+  $Test::Subroutines::VERSION = '1.113350';
 }
 
 require Exporter;
@@ -102,6 +102,7 @@ sub not_external {
             get_subref($s, $pack) eq get_subref($s, $p);
             # subref in used package equal to subref in hack package
     }
+    return 1;
 }
 
 sub get_subref {
@@ -130,7 +131,7 @@ Test::Subroutines - Standalone execution of Perl program subroutines
 
 =head1 VERSION
 
-version 1.113280
+version 1.113350
 
 =head1 PURPOSE
 

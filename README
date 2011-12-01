@@ -2,7 +2,7 @@ NAME
     Test::Subroutines - Standalone execution of Perl program subroutines
 
 VERSION
-    version 1.113280
+    version 1.113350
 
 PURPOSE
     You have a (possibly ancient) Perl program for which you'd like to write

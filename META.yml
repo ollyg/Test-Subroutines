@@ -27,4 +27,4 @@ resources:
   bugtracker: https://rt.cpan.org/Public/Dist/Display.html?Name=Test-Subroutines
   homepage: https://github.com/ollyg/Test-Subroutines/wiki
   repository: git://github.com/ollyg/Test-Subroutines.git
-version: 1.113280
+version: 1.113350
