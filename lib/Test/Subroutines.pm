@@ -99,6 +99,7 @@ sub not_external {
             get_subref($s, $pack) eq get_subref($s, $p);
             # subref in used package equal to subref in hack package
     }
+    return 1;
 }
 
 sub get_subref {
